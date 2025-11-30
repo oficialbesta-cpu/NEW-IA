@@ -109,6 +109,9 @@
   }
   #dev-content button{
     background:#28a745;
+    color:#fff;
+    font-weight:bold;
+    cursor:pointer;
   }
 </style>
 </head>
@@ -146,7 +149,6 @@ let apiKey = "";
 
 const userInput = document.getElementById('user-input');
 const sendBtn = document.getElementById('send-btn');
-const responseBox = document.getElementById('response-box');
 const responseContent = document.getElementById('response-content');
 const copyBtn = document.getElementById('copy-btn');
 
@@ -160,18 +162,36 @@ const saveBtn = document.getElementById('save-btn');
 sendBtn.onclick = async ()=>{
   const msg = userInput.value.trim();
   if(!msg) return;
-  responseContent.innerHTML = '...';
+  responseContent.textContent = '...';
   try{
     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({contents:[{parts:[{text: prompt + "\n\nUsuário: "+msg}]}]})
     });
+    
+    if(!res.ok){
+      const errText = await res.text();
+      responseContent.textContent = "ERRO NA API: " + errText;
+      return;
+    }
+
     const data = await res.json();
-    const reply = data?.candidates?.[0]?.content?.[0]?.text || "ERRO NA RESPOSTA";
+
+    // pega a resposta correta
+    let reply = "";
+    if(data.candidates && data.candidates.length>0 && data.candidates[0].content && data.candidates[0].content.length>0){
+      reply = data.candidates[0].content[0].text;
+    } else if(data.output && data.output.length>0 && data.output[0].content && data.output[0].content.length>0){
+      reply = data.output[0].content[0].text;
+    } else {
+      reply = "ERRO: resposta vazia ou formato inesperado";
+    }
+
     responseContent.textContent = reply;
+
   }catch(e){
-    responseContent.textContent = "ERRO: "+e;
+    responseContent.textContent = "ERRO NA REQUISIÇÃO: "+e.message;
   }
   userInput.value='';
 }
@@ -193,8 +213,7 @@ saveBtn.onclick = ()=>{
   devPanel.style.display='none';
   alert('Tudo atualizado!');
 }
-
 </script>
 
 </body>
-  </html>
+</html>
